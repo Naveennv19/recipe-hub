@@ -7,9 +7,10 @@ import { Auth } from '@supabase/auth-ui-react';
 import { ThemeSupa } from '@supabase/auth-ui-shared';
 
 // Supabase Configuration
-const supabaseUrl = 'https://cifixxeuilssixjbiggk.supabase.co';
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNpZml4eGV1aWxzc2l4amJpZ2drIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE0NTAyMDIsImV4cCI6MjA2NzAyNjIwMn0.QKm8PwoSh9hspjds-hjSecsEr5sP3tEjVes_eL6s6PI';
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
 
 const CUISINE_TYPES = ["Italian", "Mexican", "Indian", "Chinese", "Japanese", "French", "Thai", "Spanish", "Greek", "American", "Other"];
 const MEAL_TYPES = ["Breakfast", "Lunch", "Dinner", "Snack", "Dessert", "Brunch"];
