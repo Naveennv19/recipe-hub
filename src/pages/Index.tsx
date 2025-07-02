@@ -1,5 +1,26 @@
 import React, { useState, useEffect } from 'react';
+import { initializeApp } from 'firebase/app';
+import { getAuth, signInAnonymously, onAuthStateChanged } from 'firebase/auth';
+import { getFirestore, collection, addDoc, onSnapshot, query, doc, deleteDoc, setLogLevel } from 'firebase/firestore';
 import { ChefHat, Flame, Salad, UtensilsCrossed, PlusCircle, Trash2, BookUser, BarChart, Drumstick } from 'lucide-react';
+
+// --- Firebase Configuration ---
+const firebaseConfig = {
+  apiKey: "AIzaSyAhPGEdJXPuPvVqcPqD6ODa4uMHB9EegkM",
+  authDomain: "meal-designer.firebaseapp.com",
+  projectId: "meal-designer",
+  storageBucket: "meal-designer.firebasestorage.app",
+  messagingSenderId: "535995907982",
+  appId: "1:535995907982:web:35519cf6ef50fa04366edf",
+  measurementId: "G-N62KMFMSBG"
+};
+const appId = firebaseConfig.appId;
+
+// --- Initialize Firebase ---
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+setLogLevel('error'); // Set to 'error' to hide verbose logs in the demo
 
 // --- Helper Data ---
 const CUISINE_TYPES = ["Italian", "Mexican", "Indian", "Chinese", "Japanese", "French", "Thai", "Spanish", "Greek", "American", "Other"];
@@ -136,18 +157,51 @@ export default function App() {
     const [nutrition, setNutrition] = useState(initialNutritionalState);
     const [ingredients, setIngredients] = useState([initialIngredientState]);
     const [savedRecipes, setSavedRecipes] = useState([]);
+    const [userId, setUserId] = useState(null);
+    const [isAuthReady, setIsAuthReady] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
     const [successMessage, setSuccessMessage] = useState('');
     const [activeTab, setActiveTab] = useState('form');
 
-    // --- Local Storage Data Loading ---
+    // --- Firebase Authentication and Data Fetching ---
     useEffect(() => {
-        const storedRecipes = localStorage.getItem('recipeHub_recipes');
-        if (storedRecipes) {
-            setSavedRecipes(JSON.parse(storedRecipes));
-        }
+        const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                setUserId(user.uid);
+                setIsAuthReady(true);
+            } else {
+                try {
+                    await signInAnonymously(auth);
+                } catch (authError) {
+                    console.error("Authentication Error:", authError);
+                    setError("Failed to authenticate. Please refresh the page.");
+                    setIsAuthReady(true);
+                }
+            }
+        });
+        return () => unsubscribeAuth();
     }, []);
+
+    useEffect(() => {
+        if (!isAuthReady || !userId) return;
+
+        const recipesCollectionPath = `recipes/${userId}`;
+        const q = query(collection(db, recipesCollectionPath));
+
+        const unsubscribeFirestore = onSnapshot(q, (querySnapshot) => {
+            const recipesData = [];
+            querySnapshot.forEach((doc) => {
+                recipesData.push({ id: doc.id, ...doc.data() });
+            });
+            setSavedRecipes(recipesData);
+        }, (err) => {
+            console.error("Firestore Snapshot Error:", err);
+            setError("Failed to load saved recipes.");
+        });
+
+        return () => unsubscribeFirestore();
+    }, [isAuthReady, userId]);
 
     // --- Form Input Handlers ---
     const handleRecipeChange = (e) => {
@@ -197,12 +251,15 @@ export default function App() {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        if (!userId) {
+            setError("You must be signed in to save a recipe.");
+            return;
+        }
         setIsLoading(true);
         setError('');
         setSuccessMessage('');
 
         const fullRecipeData = {
-            id: Date.now().toString(), // Simple ID generation
             ...recipe,
             nutrition,
             ingredients,
@@ -210,9 +267,8 @@ export default function App() {
         };
         
         try {
-            const newRecipes = [...savedRecipes, fullRecipeData];
-            localStorage.setItem('recipeHub_recipes', JSON.stringify(newRecipes));
-            setSavedRecipes(newRecipes);
+            const recipesCollectionPath = `recipes/${userId}`;
+            await addDoc(collection(db, recipesCollectionPath), fullRecipeData);
             setSuccessMessage('Recipe saved successfully!');
             resetForm();
             setTimeout(() => setSuccessMessage(''), 3000);
@@ -224,13 +280,12 @@ export default function App() {
         }
     };
     
-    const handleDeleteRecipe = (recipeId) => {
-        if (!recipeId) return;
+    const handleDeleteRecipe = async (recipeId) => {
+        if (!userId || !recipeId) return;
         if (window.confirm("Are you sure you want to delete this recipe?")) {
             try {
-                const newRecipes = savedRecipes.filter(recipe => recipe.id !== recipeId);
-                localStorage.setItem('recipeHub_recipes', JSON.stringify(newRecipes));
-                setSavedRecipes(newRecipes);
+                const recipeDocPath = `recipes/${userId}/${recipeId}`;
+                await deleteDoc(doc(db, recipeDocPath));
                 setSuccessMessage('Recipe deleted successfully!');
                 setTimeout(() => setSuccessMessage(''), 3000);
             } catch (err) {
@@ -245,7 +300,8 @@ export default function App() {
             <div className="container mx-auto p-4 sm:p-6 lg:p-8">
                 <header className="text-center mb-8">
                     <h1 className="text-4xl sm:text-5xl font-extrabold text-gray-800 tracking-tight">Recipe Hub</h1>
-                    <p className="mt-2 text-lg text-gray-500">Your personal cookbook, saved locally.</p>
+                    <p className="mt-2 text-lg text-gray-500">Your personal cookbook, powered by Firebase.</p>
+                    {userId && <p className="mt-4 text-xs text-gray-400 font-mono bg-gray-100 px-2 py-1 rounded-md inline-block">User ID: {userId}</p>}
                 </header>
 
                 {error && <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-6 rounded-md" role="alert">{error}</div>}
@@ -354,7 +410,7 @@ export default function App() {
                              <button type="button" onClick={resetForm} className="px-6 py-3 text-sm font-semibold text-gray-600 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors">
                                 Clear Form
                             </button>
-                            <button type="submit" disabled={isLoading} className="px-8 py-3 font-semibold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all duration-300 disabled:bg-indigo-300 disabled:cursor-not-allowed flex items-center">
+                            <button type="submit" disabled={isLoading || !isAuthReady} className="px-8 py-3 font-semibold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all duration-300 disabled:bg-indigo-300 disabled:cursor-not-allowed flex items-center">
                                 {isLoading ? (
                                     <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
