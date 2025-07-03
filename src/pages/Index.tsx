@@ -77,6 +77,7 @@ const App = () => {
   const [activeTab, setActiveTab] = useState('form');
   const [session, setSession] = useState(null);
   const [isAuthReady, setIsAuthReady] = useState(false);
+  const [editingRecipeId, setEditingRecipeId] = useState(null);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -93,6 +94,7 @@ const App = () => {
     setRecipe(initialRecipeState);
     setNutrition(initialNutritionalState);
     setIngredients([initialIngredientState]);
+    setEditingRecipeId(null);
   };
 
   useEffect(() => {
@@ -141,16 +143,28 @@ const App = () => {
       ...recipe,
       nutrition,
       ingredients,
-      createAt: new Date().toISOString(),  
+      createAt: new Date().toISOString(),
       user_id: userId,
     };
-    console.log('Submitting:', fullRecipeData);
 
-    const { error } = await supabase.from('recipes').insert([fullRecipeData]);
+    let error;
+    if (editingRecipeId) {
+      // Update existing recipe
+      ({ error } = await supabase
+        .from('recipes')
+        .update(fullRecipeData)
+        .eq('id', editingRecipeId)
+        .eq('user_id', userId));
+    } else {
+      // Insert new recipe
+      ({ error } = await supabase.from('recipes').insert([fullRecipeData]));
+    }
+
     if (error) setError("Failed to save recipe. Please try again.");
     else {
       setSuccessMessage("Recipe saved successfully!");
       resetForm();
+      setEditingRecipeId(null);
       setTimeout(() => setSuccessMessage(''), 3000);
     }
     setIsLoading(false);
@@ -205,6 +219,27 @@ const App = () => {
 
   const removeIngredient = (index) => {
     setIngredients((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleEditRecipe = (recipeData) => {
+    setRecipe({
+      recipeName: recipeData.recipeName,
+      cuisineType: recipeData.cuisineType,
+      mealType: recipeData.mealType,
+      courseType: recipeData.courseType,
+      difficultyLevel: recipeData.difficultyLevel,
+      prepTime: recipeData.prepTime,
+      prepTimeUnit: recipeData.prepTimeUnit,
+      cookTime: recipeData.cookTime,
+      cookTimeUnit: recipeData.cookTimeUnit,
+      servingCount: recipeData.servingCount,
+      tasteProfile: recipeData.tasteProfile,
+      youtubeUrl: recipeData.youtubeUrl,
+    });
+    setNutrition(recipeData.nutrition || initialNutritionalState);
+    setIngredients(recipeData.ingredients || [initialIngredientState]);
+    setEditingRecipeId(recipeData.id);
+    setActiveTab('form');
   };
 
   if (!isAuthReady) {
@@ -364,7 +399,14 @@ const App = () => {
                         <h2 className="text-3xl font-bold text-gray-800 mb-6 text-center">My Saved Recipes</h2>
                         {savedRecipes.length > 0 ? (
                              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                {savedRecipes.map(r => <RecipeCard key={r.id} r={r} onDelete={handleDeleteRecipe} />)}
+                                {savedRecipes.map(r => (
+                                    <RecipeCard
+                                        key={r.id}
+                                        r={r}
+                                        onDelete={handleDeleteRecipe}
+                                        onClick={() => handleEditRecipe(r)}
+                                    />
+                                ))}
                             </div>
                         ) : (
                             <div className="text-center py-16 px-6 bg-white rounded-2xl shadow-sm border border-gray-200/80">

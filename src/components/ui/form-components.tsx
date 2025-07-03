@@ -74,22 +74,37 @@ type ChipSelectProps = {
   );
   
 
-export const RecipeCard = ({ r, onDelete }) => (
-    <div className="bg-white p-5 rounded-xl shadow-md border border-gray-200/80 hover:shadow-lg transition-shadow duration-300 relative">
-        <button onClick={() => onDelete(r.id)} className="absolute top-3 right-3 text-gray-400 hover:text-red-500 transition-colors">
-            <Trash2 size={18} />
-        </button>
-        <h3 className="text-xl font-bold text-indigo-700 mb-2">{r.recipeName}</h3>
-        <p className="text-sm text-gray-500 mb-3">{r.cuisineType} | {r.courseType}</p>
-        <div className="flex items-center text-sm text-gray-600 mb-4">
-            <Flame size={16} className="mr-2 text-orange-500" />
-            <span>{r.nutrition.calories || 'N/A'} kcal</span>
-            <span className="mx-2">|</span>
-            <Drumstick size={16} className="mr-2 text-yellow-600" />
-            <span>{r.ingredients.length} ingredients</span>
-        </div>
-        <div className="border-t border-gray-200 pt-3">
-            <p className="text-xs text-gray-400">Saved: {new Date(r.createAt).toLocaleDateString()}</p>
-        </div>
+  type RecipeCardProps = {
+    r: any;
+    onDelete: (recipeId: any) => void;
+    onClick?: () => void;
+  };
+  
+  export const RecipeCard = ({ r, onDelete, onClick }: RecipeCardProps) => (
+    <div
+      className="bg-white p-5 rounded-xl shadow-md border border-gray-200/80 hover:shadow-lg transition-shadow duration-300 relative cursor-pointer"
+      onClick={onClick}
+    >
+      <button
+        onClick={(e) => {
+          e.stopPropagation(); // prevent card click when delete is clicked
+          onDelete(r.id);
+        }}
+        className="absolute top-3 right-3 text-gray-400 hover:text-red-500 transition-colors"
+      >
+        <Trash2 size={18} />
+      </button>
+      <h3 className="text-xl font-bold text-indigo-700 mb-2">{r.recipeName}</h3>
+      <p className="text-sm text-gray-500 mb-3">{r.cuisineType} | {r.courseType}</p>
+      <div className="flex items-center text-sm text-gray-600 mb-4">
+        <Flame size={16} className="mr-2 text-orange-500" />
+        <span>{r.nutrition.calories || 'N/A'} kcal</span>
+        <span className="mx-2">|</span>
+        <Drumstick size={16} className="mr-2 text-yellow-600" />
+        <span>{r.ingredients.length} ingredients</span>
+      </div>
+      <div className="border-t border-gray-200 pt-3">
+        <p className="text-xs text-gray-400">Saved: {new Date(r.createAt).toLocaleDateString()}</p>
+      </div>
     </div>
-);
+  );
