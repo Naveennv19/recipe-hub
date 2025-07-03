@@ -7,8 +7,8 @@ import { Auth } from '@supabase/auth-ui-react';
 import { ThemeSupa } from '@supabase/auth-ui-shared';
 
 // Supabase Configuration
-const supabaseUrl = 'https://cifixxeuilssixjbiggk.supabase.co';
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNpZml4eGV1aWxzc2l4amJpZ2drIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE0NTAyMDIsImV4cCI6MjA2NzAyNjIwMn0.QKm8PwoSh9hspjds-hjSecsEr5sP3tEjVes_eL6s6PI';
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 const CUISINE_TYPES = ["Italian", "Mexican", "Indian", "Chinese", "Japanese", "French", "Thai", "Spanish", "Greek", "American", "Other"];
@@ -67,30 +67,38 @@ const App = () => {
   };
 
   useEffect(() => {
-    const storedId = localStorage.getItem('user_id');
-    if (storedId) {
-      setUserId(storedId);
-    } else {
-      const newId = crypto.randomUUID();
-      localStorage.setItem('user_id', newId);
-      setUserId(newId);
+    if (session?.user?.id) {
+      setUserId(session.user.id);
     }
-  }, []);
+  }, [session]);
 
   useEffect(() => {
     if (!userId) return;
+  
     const fetchRecipes = async () => {
       const { data, error } = await supabase
         .from('recipes')
-        .select('recipeName, cuisineType, mealType, courseType, difficultyLevel, prepTime, prepTimeUnit, cookTime, cookTimeUnit, servingCount, tasteProfile, youtubeUrl, nutrition, ingredients, createdAt, user_id')
+        .select(`
+          id, recipeName, cuisineType, mealType, courseType, difficultyLevel, 
+          prepTime, prepTimeUnit, cookTime, cookTimeUnit, 
+          servingCount, tasteProfile, youtubeUrl, nutrition, 
+          ingredients, createAt, user_id
+        `)
         .eq('user_id', userId)
-        .order('createdAt', { ascending: false });
+        .order('createAt', { ascending: false });
   
-      if (error) setError('Failed to fetch recipes.');
-      else setSavedRecipes(data);
+      if (error) {
+        console.error('Supabase Error:', error);
+        setError('Failed to fetch recipes.');
+      } else {
+        setSavedRecipes(data);
+      }
     };
+  
     fetchRecipes();
   }, [userId]);
+  
+    
   
 
   const handleSubmit = async (e) => {
@@ -104,9 +112,10 @@ const App = () => {
       ...recipe,
       nutrition,
       ingredients,
-      createdAt: new Date().toISOString(),
+      createAt: new Date().toISOString(),  
       user_id: userId,
     };
+    console.log('Submitting:', fullRecipeData);
 
     const { error } = await supabase.from('recipes').insert([fullRecipeData]);
     if (error) setError("Failed to save recipe. Please try again.");
@@ -180,6 +189,7 @@ const App = () => {
       </div>
     );
   }
+  
 
   return (
         <div className="bg-gray-50 min-h-screen font-sans text-gray-900">
@@ -207,7 +217,7 @@ const App = () => {
                         {/* --- Section 1: Recipe Basic Details --- */}
                         <FormSection title="Recipe Details" icon={<ChefHat className="text-indigo-500" />}>
                             <div className="md:col-span-2">
-                                <Input label="Recipe Name" name="recipeName" value={recipe.recipeName} onChange={handleRecipeChange} placeholder="e.g., Classic Lasagna" required />
+                                <Input label="Recipe Name" name="recipeName" value={recipe.recipeName} onChange={handleRecipeChange} placeholder="e.g., Classic Lasagna" required autoComplete="name"/>
                             </div>
                             <Select label="Cuisine Type" name="cuisineType" value={recipe.cuisineType} onChange={handleRecipeChange}>
                                 {CUISINE_TYPES.map(c => <option key={c} value={c}>{c}</option>)}
@@ -222,30 +232,30 @@ const App = () => {
                                 {DIFFICULTY_LEVELS.map(d => <option key={d} value={d}>{d}</option>)}
                             </Select>
                             <div className="flex gap-2">
-                                <Input label="Prep Time" name="prepTime" type="number" value={recipe.prepTime} onChange={handleRecipeChange} placeholder="e.g., 30" />
+                                <Input label="Prep Time" name="prepTime" type="number" value={recipe.prepTime} onChange={handleRecipeChange} placeholder="e.g., 30" autoComplete="off"/>
                                 <Select label="Unit" name="prepTimeUnit" value={recipe.prepTimeUnit} onChange={handleRecipeChange}>
                                     {TIME_UNITS.map(t => <option key={t} value={t}>{t}</option>)}
                                 </Select>
                             </div>
                              <div className="flex gap-2">
-                                <Input label="Cook Time" name="cookTime" type="number" value={recipe.cookTime} onChange={handleRecipeChange} placeholder="e.g., 45" />
+                                <Input label="Cook Time" name="cookTime" type="number" value={recipe.cookTime} onChange={handleRecipeChange} placeholder="e.g., 45" autoComplete="off"/>
                                 <Select label="Unit" name="cookTimeUnit" value={recipe.cookTimeUnit} onChange={handleRecipeChange}>
                                     {TIME_UNITS.map(t => <option key={t} value={t}>{t}</option>)}
                                 </Select>
                             </div>
-                            <Input label="Serving Count" name="servingCount" type="number" value={recipe.servingCount} onChange={handleRecipeChange} placeholder="e.g., 4" />
-                            <Input label="YouTube URL" name="youtubeUrl" type="url" value={recipe.youtubeUrl} onChange={handleRecipeChange} placeholder="https://youtube.com/watch?v=..." />
+                            <Input label="Serving Count" name="servingCount" type="number" value={recipe.servingCount} onChange={handleRecipeChange} placeholder="e.g., 4" autoComplete="off"/>
+                            <Input label="YouTube URL" name="youtubeUrl" type="url" value={recipe.youtubeUrl} onChange={handleRecipeChange} placeholder="https://youtube.com/watch?v=..." autoComplete="youtubeUrl"/>
                             <ChipSelect label="Taste Profile" options={TASTE_PROFILES} selected={recipe.tasteProfile} onChange={handleTasteProfileChange} />
                         </FormSection>
 
                         {/* --- Section 2: Nutritional Information --- */}
                         <FormSection title="Nutritional Information (per serving)" icon={<BarChart className="text-green-500" />}>
-                            <Input label="Calories (kcal)" name="calories" type="number" value={nutrition.calories} onChange={handleNutritionChange} placeholder="e.g., 550" />
-                            <Input label="Carbohydrates (g)" name="carbohydrates" type="number" value={nutrition.carbohydrates} onChange={handleNutritionChange} placeholder="e.g., 45" />
-                            <Input label="Protein (g)" name="protein" type="number" value={nutrition.protein} onChange={handleNutritionChange} placeholder="e.g., 30" />
-                            <Input label="Fat (g)" name="fat" type="number" value={nutrition.fat} onChange={handleNutritionChange} placeholder="e.g., 25" />
-                            <Input label="Fiber (g)" name="fiber" type="number" value={nutrition.fiber} onChange={handleNutritionChange} placeholder="e.g., 8" />
-                            <Input label="Sodium (mg)" name="sodium" type="number" value={nutrition.sodium} onChange={handleNutritionChange} placeholder="e.g., 800" />
+                            <Input label="Calories (kcal)" name="calories" type="number" value={nutrition.calories} onChange={handleNutritionChange} placeholder="e.g., 550" autoComplete="off"/>
+                            <Input label="Carbohydrates (g)" name="carbohydrates" type="number" value={nutrition.carbohydrates} onChange={handleNutritionChange} placeholder="e.g., 45" autoComplete="off"/>
+                            <Input label="Protein (g)" name="protein" type="number" value={nutrition.protein} onChange={handleNutritionChange} placeholder="e.g., 30" autoComplete="off"/>
+                            <Input label="Fat (g)" name="fat" type="number" value={nutrition.fat} onChange={handleNutritionChange} placeholder="e.g., 25" autoComplete="off"/>
+                            <Input label="Fiber (g)" name="fiber" type="number" value={nutrition.fiber} onChange={handleNutritionChange} placeholder="e.g., 8" autoComplete="off"/>
+                            <Input label="Sodium (mg)" name="sodium" type="number" value={nutrition.sodium} onChange={handleNutritionChange} placeholder="e.g., 800" autoComplete="off"/>
                         </FormSection>
 
                         {/* --- Section 3: Ingredients --- */}

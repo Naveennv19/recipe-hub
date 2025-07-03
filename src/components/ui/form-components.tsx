@@ -44,23 +44,35 @@ export const Select = ({ label, name, value, onChange, children, ...props }) => 
     </div>
 );
 
-export const ChipSelect = ({ label, options, selected, onChange }) => (
+type ChipSelectProps = {
+    label: string;
+    options: string[];
+    selected: string[];
+    onChange: (option: string) => void;
+  };
+  
+  export const ChipSelect = ({ label, options, selected, onChange }: ChipSelectProps) => (
     <div className="md:col-span-2">
-        <label className="mb-2 block text-sm font-medium text-gray-600">{label}</label>
-        <div className="flex flex-wrap gap-2">
-            {options.map(option => (
-                <button
-                    type="button"
-                    key={option}
-                    onClick={() => onChange(option)}
-                    className={`px-4 py-2 text-sm rounded-full transition-all duration-200 ${selected.includes(option) ? 'bg-indigo-600 text-white shadow-md' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
-                >
-                    {option}
-                </button>
-            ))}
-        </div>
+      <label className="mb-2 block text-sm font-medium text-gray-600">{label}</label>
+      <div className="flex flex-wrap gap-2">
+        {options.map(option => (
+          <button
+            type="button"
+            key={option}
+            onClick={() => onChange(option)}
+            className={`px-4 py-2 text-sm rounded-full transition-all duration-200 ${
+              selected.includes(option)
+                ? 'bg-indigo-600 text-white shadow-md'
+                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+            }`}
+          >
+            {option}
+          </button>
+        ))}
+      </div>
     </div>
-);
+  );
+  
 
 export const RecipeCard = ({ r, onDelete }) => (
     <div className="bg-white p-5 rounded-xl shadow-md border border-gray-200/80 hover:shadow-lg transition-shadow duration-300 relative">
@@ -77,7 +89,7 @@ export const RecipeCard = ({ r, onDelete }) => (
             <span>{r.ingredients.length} ingredients</span>
         </div>
         <div className="border-t border-gray-200 pt-3">
-            <p className="text-xs text-gray-400">Saved: {new Date(r.createdAt).toLocaleDateString()}</p>
+            <p className="text-xs text-gray-400">Saved: {new Date(r.createAt).toLocaleDateString()}</p>
         </div>
     </div>
 );
