@@ -51,7 +51,7 @@ const TIME_UNITS = ["minutes", "hours"];
 const SHELF_LIFE_UNITS = ["days", "weeks", "months", "years"];
 
 const initialRecipeState = {
-  recipeName: '', cuisineType: 'Italian', mealType: 'Dinner', courseType: 'Main Course',
+  recipeName: '', cuisineType: 'Italian', mealType: [], courseType: 'Main Course',
   difficultyLevel: 'Medium', prepTime: '', prepTimeUnit: 'minutes', cookTime: '', cookTimeUnit: 'minutes',
   servingCount: '', tasteProfile: [], youtubeUrl: ''
 };
@@ -251,9 +251,20 @@ const App = () => {
                             <Select label="Cuisine Type" name="cuisineType" value={recipe.cuisineType} onChange={handleRecipeChange}>
                                 {CUISINE_TYPES.map(c => <option key={c} value={c}>{c}</option>)}
                             </Select>
-                            <Select label="Meal Type" name="mealType" value={recipe.mealType} onChange={handleRecipeChange}>
-                                {MEAL_TYPES.map(m => <option key={m} value={m}>{m}</option>)}
-                            </Select>
+                            <ChipSelect
+                              label="Meal Type"
+                              options={MEAL_TYPES}
+                              selected={recipe.mealType}
+                              onChange={(value) => {
+                                setRecipe((prev) => {
+                                  const alreadySelected = prev.mealType.includes(value);
+                                  const updatedMealTypes = alreadySelected
+                                    ? prev.mealType.filter((v) => v !== value)
+                                    : [...prev.mealType, value];
+                                  return { ...prev, mealType: updatedMealTypes };
+                                });
+                              }}
+                            />
                             <Select label="Course Type" name="courseType" value={recipe.courseType} onChange={handleRecipeChange}>
                                 {COURSE_TYPES.map(c => <option key={c} value={c}>{c}</option>)}
                             </Select>
