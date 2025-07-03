@@ -51,7 +51,7 @@ const TIME_UNITS = ["minutes", "hours"];
 const SHELF_LIFE_UNITS = ["days", "weeks", "months", "years"];
 
 const initialRecipeState = {
-  recipeName: '', cuisineType: 'Italian', mealType: 'Dinner', courseType: 'Main Course',
+  recipeName: '', cuisineType: 'Italian', mealType: [], courseType: 'Main Course',
   difficultyLevel: 'Medium', prepTime: '', prepTimeUnit: 'minutes', cookTime: '', cookTimeUnit: 'minutes',
   servingCount: '', tasteProfile: [], youtubeUrl: ''
 };
@@ -77,6 +77,7 @@ const App = () => {
   const [activeTab, setActiveTab] = useState('form');
   const [session, setSession] = useState(null);
   const [isAuthReady, setIsAuthReady] = useState(false);
+  const [editingRecipeId, setEditingRecipeId] = useState(null);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -93,6 +94,7 @@ const App = () => {
     setRecipe(initialRecipeState);
     setNutrition(initialNutritionalState);
     setIngredients([initialIngredientState]);
+    setEditingRecipeId(null);
   };
 
   useEffect(() => {
@@ -141,16 +143,28 @@ const App = () => {
       ...recipe,
       nutrition,
       ingredients,
-      createAt: new Date().toISOString(),  
+      createAt: new Date().toISOString(),
       user_id: userId,
     };
-    console.log('Submitting:', fullRecipeData);
 
-    const { error } = await supabase.from('recipes').insert([fullRecipeData]);
+    let error;
+    if (editingRecipeId) {
+      // Update existing recipe
+      ({ error } = await supabase
+        .from('recipes')
+        .update(fullRecipeData)
+        .eq('id', editingRecipeId)
+        .eq('user_id', userId));
+    } else {
+      // Insert new recipe
+      ({ error } = await supabase.from('recipes').insert([fullRecipeData]));
+    }
+
     if (error) setError("Failed to save recipe. Please try again.");
     else {
       setSuccessMessage("Recipe saved successfully!");
       resetForm();
+      setEditingRecipeId(null);
       setTimeout(() => setSuccessMessage(''), 3000);
     }
     setIsLoading(false);
@@ -207,6 +221,27 @@ const App = () => {
     setIngredients((prev) => prev.filter((_, i) => i !== index));
   };
 
+  const handleEditRecipe = (recipeData) => {
+    setRecipe({
+      recipeName: recipeData.recipeName,
+      cuisineType: recipeData.cuisineType,
+      mealType: recipeData.mealType,
+      courseType: recipeData.courseType,
+      difficultyLevel: recipeData.difficultyLevel,
+      prepTime: recipeData.prepTime,
+      prepTimeUnit: recipeData.prepTimeUnit,
+      cookTime: recipeData.cookTime,
+      cookTimeUnit: recipeData.cookTimeUnit,
+      servingCount: recipeData.servingCount,
+      tasteProfile: recipeData.tasteProfile,
+      youtubeUrl: recipeData.youtubeUrl,
+    });
+    setNutrition(recipeData.nutrition || initialNutritionalState);
+    setIngredients(recipeData.ingredients || [initialIngredientState]);
+    setEditingRecipeId(recipeData.id);
+    setActiveTab('form');
+  };
+
   if (!isAuthReady) {
     return <div className="p-4 text-center">Loading auth...</div>;
   }
@@ -251,9 +286,20 @@ const App = () => {
                             <Select label="Cuisine Type" name="cuisineType" value={recipe.cuisineType} onChange={handleRecipeChange}>
                                 {CUISINE_TYPES.map(c => <option key={c} value={c}>{c}</option>)}
                             </Select>
-                            <Select label="Meal Type" name="mealType" value={recipe.mealType} onChange={handleRecipeChange}>
-                                {MEAL_TYPES.map(m => <option key={m} value={m}>{m}</option>)}
-                            </Select>
+                            <ChipSelect
+                              label="Meal Type"
+                              options={MEAL_TYPES}
+                              selected={recipe.mealType}
+                              onChange={(value) => {
+                                setRecipe((prev) => {
+                                  const alreadySelected = prev.mealType.includes(value);
+                                  const updatedMealTypes = alreadySelected
+                                    ? prev.mealType.filter((v) => v !== value)
+                                    : [...prev.mealType, value];
+                                  return { ...prev, mealType: updatedMealTypes };
+                                });
+                              }}
+                            />
                             <Select label="Course Type" name="courseType" value={recipe.courseType} onChange={handleRecipeChange}>
                                 {COURSE_TYPES.map(c => <option key={c} value={c}>{c}</option>)}
                             </Select>
@@ -353,7 +399,14 @@ const App = () => {
                         <h2 className="text-3xl font-bold text-gray-800 mb-6 text-center">My Saved Recipes</h2>
                         {savedRecipes.length > 0 ? (
                              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                {savedRecipes.map(r => <RecipeCard key={r.id} r={r} onDelete={handleDeleteRecipe} />)}
+                                {savedRecipes.map(r => (
+                                    <RecipeCard
+                                        key={r.id}
+                                        r={r}
+                                        onDelete={handleDeleteRecipe}
+                                        onClick={() => handleEditRecipe(r)}
+                                    />
+                                ))}
                             </div>
                         ) : (
                             <div className="text-center py-16 px-6 bg-white rounded-2xl shadow-sm border border-gray-200/80">
