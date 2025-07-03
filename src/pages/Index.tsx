@@ -12,7 +12,35 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 
-const CUISINE_TYPES = ["Italian", "Mexican", "Indian", "Chinese", "Japanese", "French", "Thai", "Spanish", "Greek", "American", "Other"];
+const CUISINE_TYPES = [
+  "North Indian",
+  "South Indian",
+  "Andhra",
+  "Kerala",
+  "Tamil Nadu",
+  "Chettinad",
+  "Malabar",
+  "⁠Mughlai",
+  "⁠Hyderabadi",
+  "Punjabi",
+  "Bengali",
+  "Mughlai",
+  "⁠Jain",
+  "Sattvic",
+  "⁠Vaishnav",
+  "⁠Udupi",
+  "Rajasthani",
+  "Kashmiri",
+  "Karnataka",
+  "Jain",
+  "Italian",
+  "Mexican",
+  "Chinese",
+  "American",
+  "French",
+  "Thai"
+];
+
 const MEAL_TYPES = ["Breakfast", "Lunch", "Dinner", "Snack", "Dessert", "Brunch"];
 const COURSE_TYPES = ["Appetizer", "Main Course", "Side Dish", "Dessert", "Beverage", "Salad"];
 const DIFFICULTY_LEVELS = ["Easy", "Medium", "Hard"];
