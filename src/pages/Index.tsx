@@ -5,6 +5,7 @@ import { ChefHat, Salad, UtensilsCrossed, PlusCircle, BookUser, BarChart } from 
 import { FormSection, Input, Select, ChipSelect, RecipeCard } from '@/components/ui/form-components';
 import { Auth } from '@supabase/auth-ui-react';
 import { ThemeSupa } from '@supabase/auth-ui-shared';
+import { useNavigate } from 'react-router-dom';
 
 // Supabase Configuration
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
@@ -66,6 +67,7 @@ const initialIngredientState = {
 };
 
 const App = () => {
+  const navigate = useNavigate();
   const [recipe, setRecipe] = useState(initialRecipeState);
   const [nutrition, setNutrition] = useState(initialNutritionalState);
   const [ingredients, setIngredients] = useState([initialIngredientState]);
@@ -102,6 +104,22 @@ const App = () => {
       setUserId(session.user.id);
     }
   }, [session]);
+
+  // Check for editing recipe data from localStorage
+  useEffect(() => {
+    const editingRecipeData = localStorage.getItem('editingRecipe');
+    if (editingRecipeData) {
+      try {
+        const recipeData = JSON.parse(editingRecipeData);
+        handleEditRecipe(recipeData);
+        // Clear the localStorage after loading
+        localStorage.removeItem('editingRecipe');
+      } catch (error) {
+        console.error('Error parsing editing recipe data:', error);
+        localStorage.removeItem('editingRecipe');
+      }
+    }
+  }, []);
 
   useEffect(() => {
     if (!userId) return;
@@ -165,7 +183,10 @@ const App = () => {
       setSuccessMessage("Recipe saved successfully!");
       resetForm();
       setEditingRecipeId(null);
-      setTimeout(() => setSuccessMessage(''), 3000);
+      // Reload immediately after a brief moment to show success
+      setTimeout(() => {
+        window.location.reload();
+      }, 500);
     }
     setIsLoading(false);
   };
@@ -291,7 +312,7 @@ const App = () => {
                      <button onClick={() => setActiveTab('form')} className={`px-6 py-2 rounded-lg text-sm font-semibold transition-colors ${activeTab === 'form' ? 'bg-indigo-600 text-white shadow-md' : 'text-gray-600 hover:bg-gray-100'}`}>
                         {editingRecipeId ? 'Edit Recipe' : 'Add New Recipe'}
                      </button>
-                     <button onClick={() => setActiveTab('saved')} className={`px-6 py-2 rounded-lg text-sm font-semibold transition-colors ${activeTab === 'saved' ? 'bg-indigo-600 text-white shadow-md' : 'text-gray-600 hover:bg-gray-100'}`}>
+                     <button onClick={() => navigate('/saved-recipes')} className="px-6 py-2 rounded-lg text-sm font-semibold transition-colors text-gray-600 hover:bg-gray-100">
                         Saved Recipes ({savedRecipes.length})
                      </button>
                 </div>
