@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Trash2, Flame, Drumstick } from 'lucide-react';
 
 // --- UI Components (moved outside to prevent re-renders) ---
@@ -49,37 +49,129 @@ type ChipSelectProps = {
     options: string[];
     selected: string[];
     onChange: (option: string) => void;
-  };
-  
-  export const ChipSelect = ({ label, options, selected, onChange }: ChipSelectProps) => (
-    <div className="md:col-span-2">
-      <label className="mb-2 block text-sm font-medium text-gray-600">{label}</label>
-      <div className="flex flex-wrap gap-2">
-        {options.map(option => (
-          <button
-            type="button"
-            key={option}
-            onClick={() => onChange(option)}
-            className={`px-4 py-2 text-sm rounded-full transition-all duration-200 ${
-              selected.includes(option)
-                ? 'bg-indigo-600 text-white shadow-md'
-                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-            }`}
-          >
-            {option}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-  
+    allowCustom?: boolean;
+    customPlaceholder?: string;
+};
+
+export const ChipSelect = ({ 
+    label, 
+    options, 
+    selected, 
+    onChange, 
+    allowCustom = false, 
+    customPlaceholder = "Enter custom value..." 
+}: ChipSelectProps) => {
+    const [customValue, setCustomValue] = useState('');
+    const [showCustomInput, setShowCustomInput] = useState(false);
+
+    const handleOptionClick = (option: string) => {
+        if (option === 'Other' && allowCustom) {
+            setShowCustomInput(true);
+            return;
+        }
+        onChange(option);
+    };
+
+    const handleCustomSubmit = () => {
+        const cleaned = customValue.trim();
+        if (!cleaned) return;
+
+        try {
+            const parsed = JSON.parse(cleaned);
+            if (Array.isArray(parsed)) {
+                parsed.forEach((v) => {
+                    if (typeof v === 'string') onChange(v);
+                });
+            } else {
+                onChange(cleaned);
+            }
+        } catch {
+            onChange(cleaned);
+        }
+
+        setCustomValue('');
+        setShowCustomInput(false);
+    };
+
+    const handleKeyPress = (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            handleCustomSubmit();
+        }
+    };
+
+    const validSelected = Array.isArray(selected) ? selected : [];
+    const customValues = validSelected.filter(item => !options.includes(item));
+    const displayOptions = allowCustom ? [...options, ...customValues, 'Other'] : options;
+
+    return (
+        <div className="md:col-span-2">
+            <label className="mb-2 block text-sm font-medium text-gray-600">{label}</label>
+            <div className="flex flex-wrap gap-2">
+                {displayOptions.map(option => (
+                    <button
+                        type="button"
+                        key={option}
+                        onClick={() => handleOptionClick(option)}
+                        className={`px-4 py-2 text-sm rounded-full transition-all duration-200 ${
+                            validSelected.includes(option)
+                                ? 'bg-indigo-600 text-white shadow-md'
+                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                        }`}
+                    >
+                        {option}
+                    </button>
+                ))}
+            </div>
+
+            {showCustomInput && (
+                <div className="mt-3 flex gap-2">
+                    <input
+                        type="text"
+                        value={customValue}
+                        onChange={(e) => setCustomValue(e.target.value)}
+                        onKeyPress={handleKeyPress}
+                        placeholder={customPlaceholder}
+                        className="flex-1 p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+                        autoFocus
+                    />
+                    <button
+                        type="button"
+                        onClick={handleCustomSubmit}
+                        className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm font-medium"
+                    >
+                        Add
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => {
+                            setShowCustomInput(false);
+                            setCustomValue('');
+                        }}
+                        className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors text-sm font-medium"
+                    >
+                        Cancel
+                    </button>
+                </div>
+            )}
+
+            {validSelected.length > 0 && (
+                <div className="mt-2 text-sm text-gray-500">
+                    Selected: {validSelected.join(', ')}
+                </div>
+            )}
+        </div>
+    );
+};
+
+
 
   type RecipeCardProps = {
     r: any;
     onDelete: (recipeId: any) => void;
     onClick?: () => void;
   };
-  
+
   export const RecipeCard = ({ r, onDelete, onClick }: RecipeCardProps) => (
     <div
       className="bg-white p-5 rounded-xl shadow-md border border-gray-200/80 hover:shadow-lg transition-shadow duration-300 relative cursor-pointer"

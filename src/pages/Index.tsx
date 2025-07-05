@@ -51,7 +51,7 @@ const TIME_UNITS = ["minutes", "hours"];
 const SHELF_LIFE_UNITS = ["days", "weeks", "months", "years"];
 
 const initialRecipeState = {
-  recipeName: '', cuisineType: 'Italian', mealType: [], courseType: 'Main Course',
+  recipeName: '', description: '', cuisineType: 'Italian', mealType: [], courseType: 'Main Course',
   difficultyLevel: 'Medium', prepTime: '', prepTimeUnit: 'minutes', cookTime: '', cookTimeUnit: 'minutes',
   servingCount: '', tasteProfile: [], youtubeUrl: ''
 };
@@ -222,10 +222,30 @@ const App = () => {
   };
 
   const handleEditRecipe = (recipeData) => {
+    // Helper function to parse array data that might be stored as JSON string
+    const parseArrayData = (data) => {
+      if (Array.isArray(data)) {
+        return data.filter(item => item && item.trim() !== '');
+      }
+      if (typeof data === 'string') {
+        try {
+          const parsed = JSON.parse(data);
+          if (Array.isArray(parsed)) {
+            return parsed.filter(item => item && item.trim() !== '');
+          }
+          return parsed ? [parsed] : [];
+        } catch {
+          return data ? [data] : [];
+        }
+      }
+      return data ? [data] : [];
+    };
+
     setRecipe({
       recipeName: recipeData.recipeName,
+      description: recipeData.description || '',
       cuisineType: recipeData.cuisineType,
-      mealType: recipeData.mealType,
+      mealType: parseArrayData(recipeData.mealType),
       courseType: recipeData.courseType,
       difficultyLevel: recipeData.difficultyLevel,
       prepTime: recipeData.prepTime,
@@ -233,7 +253,7 @@ const App = () => {
       cookTime: recipeData.cookTime,
       cookTimeUnit: recipeData.cookTimeUnit,
       servingCount: recipeData.servingCount,
-      tasteProfile: recipeData.tasteProfile,
+      tasteProfile: parseArrayData(recipeData.tasteProfile),
       youtubeUrl: recipeData.youtubeUrl,
     });
     setNutrition(recipeData.nutrition || initialNutritionalState);
@@ -269,7 +289,7 @@ const App = () => {
                 
                 <div className="bg-white p-2 rounded-xl shadow-inner inline-flex mx-auto mb-8 border border-gray-200">
                      <button onClick={() => setActiveTab('form')} className={`px-6 py-2 rounded-lg text-sm font-semibold transition-colors ${activeTab === 'form' ? 'bg-indigo-600 text-white shadow-md' : 'text-gray-600 hover:bg-gray-100'}`}>
-                        Add New Recipe
+                        {editingRecipeId ? 'Edit Recipe' : 'Add New Recipe'}
                      </button>
                      <button onClick={() => setActiveTab('saved')} className={`px-6 py-2 rounded-lg text-sm font-semibold transition-colors ${activeTab === 'saved' ? 'bg-indigo-600 text-white shadow-md' : 'text-gray-600 hover:bg-gray-100'}`}>
                         Saved Recipes ({savedRecipes.length})
@@ -279,9 +299,19 @@ const App = () => {
                 {activeTab === 'form' && (
                     <form onSubmit={handleSubmit}>
                         {/* --- Section 1: Recipe Basic Details --- */}
-                        <FormSection title="Recipe Details" icon={<ChefHat className="text-indigo-500" />}>
+                        <FormSection title={editingRecipeId ? `Edit Recipe: ${recipe.recipeName}` : "Recipe Details"} icon={<ChefHat className="text-indigo-500" />}>
                             <div className="md:col-span-2">
                                 <Input label="Recipe Name" name="recipeName" value={recipe.recipeName} onChange={handleRecipeChange} placeholder="e.g., Classic Lasagna" required autoComplete="name"/>
+                            </div>
+                            <div className="md:col-span-2">
+                              <Input
+                                label="Description"
+                                name="description"
+                                value={recipe.description}
+                                onChange={handleRecipeChange}
+                                placeholder="e.g., A hearty and cheesy lasagna perfect for Sunday dinners."
+                                autoComplete="off"
+                              />
                             </div>
                             <Select label="Cuisine Type" name="cuisineType" value={recipe.cuisineType} onChange={handleRecipeChange}>
                                 {CUISINE_TYPES.map(c => <option key={c} value={c}>{c}</option>)}
@@ -320,7 +350,14 @@ const App = () => {
                             </div>
                             <Input label="Serving Count" name="servingCount" type="number" value={recipe.servingCount} onChange={handleRecipeChange} placeholder="e.g., 4" autoComplete="off"/>
                             <Input label="YouTube URL" name="youtubeUrl" type="url" value={recipe.youtubeUrl} onChange={handleRecipeChange} placeholder="https://youtube.com/watch?v=..." autoComplete="youtubeUrl"/>
-                            <ChipSelect label="Taste Profile" options={TASTE_PROFILES} selected={recipe.tasteProfile} onChange={handleTasteProfileChange} />
+                            <ChipSelect 
+                              label="Taste Profile" 
+                              options={TASTE_PROFILES} 
+                              selected={recipe.tasteProfile} 
+                              onChange={handleTasteProfileChange}
+                              allowCustom={true}
+                              customPlaceholder="Enter custom taste profile..."
+                            />
                         </FormSection>
 
                         {/* --- Section 2: Nutritional Information --- */}
@@ -388,7 +425,7 @@ const App = () => {
                                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                     </svg>
                                 ) : <UtensilsCrossed size={20} className="mr-2"/>}
-                                {isLoading ? 'Saving...' : 'Save Recipe'}
+                                {isLoading ? 'Saving...' : (editingRecipeId ? 'Update Recipe' : 'Save Recipe')}
                             </button>
                         </div>
                     </form>
