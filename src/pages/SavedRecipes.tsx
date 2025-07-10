@@ -4,6 +4,7 @@ import { createClient } from '@supabase/supabase-js';
 import { useNavigate } from 'react-router-dom';
 import { Edit, Trash2, MoreHorizontal, BookUser } from 'lucide-react';
 import './SavedRecipes.css';
+import { supabase } from '../lib/supabaseClient';
 
 // Constants for filter options
 const CUISINE_TYPES = [
@@ -18,9 +19,9 @@ const COURSE_TYPES = ["Appetizer", "Main Course", "Side Dish", "Dessert", "Bever
 const TASTE_PROFILES = ["Sweet", "Spicy", "Salty", "Sour", "Savory (Umami)", "Bitter", "Rich", "Tangy"];
 
 // Supabase Configuration
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+// const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+// const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 const SavedRecipes = () => {
   const navigate = useNavigate();
@@ -72,7 +73,14 @@ const SavedRecipes = () => {
     
     const fetchRecipes = async () => {
         const { data, error } = await supabase.from('recipes').select('*').eq('user_id', userId);
-        if (!error) setRecipes(data);
+        if (!error) {
+          // Sort by updated_at, then created_at, then createAt (descending)
+          const sorted = [...data].sort((a, b) => {
+            const getTime = (r) => new Date(r.updated_at || r.created_at || r.createAt || 0).getTime();
+            return getTime(b) - getTime(a);
+          });
+          setRecipes(sorted);
+        }
     };
 
     fetchRecipes();
@@ -182,12 +190,13 @@ const SavedRecipes = () => {
       {viewType === 'grid' ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredRecipes.map((recipe) => (
-            <RecipeCard 
-              key={recipe.id} 
-              r={recipe} 
-              onDelete={deleteRecipe}
-              onClick={() => handleEditRecipe(recipe)}
-            />
+            <div key={recipe.id}>
+              <RecipeCard
+                r={recipe}
+                onDelete={deleteRecipe}
+                onClick={() => handleEditRecipe(recipe)}
+              />
+            </div>
           ))}
         </div>
       ) : (

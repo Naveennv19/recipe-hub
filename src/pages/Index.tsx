@@ -1,13 +1,12 @@
 // Import statements
 import React, { useState, useEffect } from 'react';
-import { createClient } from '@supabase/supabase-js';
+
 import { ChefHat, Salad, UtensilsCrossed, PlusCircle, BookUser, BarChart } from 'lucide-react';
 import { FormSection, Input, Select, ChipSelect, RecipeCard } from '@/components/ui/form-components';
 import { Auth } from '@supabase/auth-ui-react';
 import { ThemeSupa } from '@supabase/auth-ui-shared';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '@/lib/supabaseClient';
-
+import { supabase } from '@/lib/supabaseClient'
 
 
 
@@ -204,30 +203,13 @@ const App = () => {
   };
 
   const handleRecipeChange = (e) => {
-    const { name, value, type } = e.target;
-    let newValue = value;
-    if (type === "number") {
-      // Allow empty string and single minus sign for typing
-      if (value === "" || value === "-") {
-        newValue = value;
-      } else if (Number(value) < 0) {
-        newValue = "0";
-      }
-    }
-    setRecipe((prev) => ({ ...prev, [name]: newValue }));
+    const { name, value } = e.target;
+    setRecipe((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleNutritionChange = (e) => {
-    const { name, value, type } = e.target;
-    let newValue = value;
-    if (type === "number") {
-      if (value === "" || value === "-") {
-        newValue = value;
-      } else if (Number(value) < 0) {
-        newValue = "0";
-      }
-    }
-    setNutrition((prev) => ({ ...prev, [name]: newValue }));
+    const { name, value } = e.target;
+    setNutrition((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleIngredientChange = (index, e) => {
@@ -298,6 +280,12 @@ const App = () => {
     setActiveTab('form');
   };
 
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    setSession(null);
+    window.location.reload();
+  };
+
   if (!isAuthReady) {
     return <div className="p-4 text-center">Loading auth...</div>;
   }
@@ -305,7 +293,7 @@ const App = () => {
   if (!session) {
     return (
       <div className="min-h-screen flex justify-center items-center">
-        <Auth supabaseClient={supabase} appearance={{ theme: ThemeSupa }} />
+        <Auth supabaseClient={supabase} appearance={{ theme: ThemeSupa }} providers={[]} />
       </div>
     );
   }
@@ -314,11 +302,22 @@ const App = () => {
   return (
         <div className="bg-gray-50 min-h-screen font-sans text-gray-900">
             <div className="container mx-auto p-4 sm:p-6 lg:p-8">
-                <header className="text-center mb-8">
+                {/* Header with flex layout for top-right logout */}
+                <div className="flex justify-between items-start mb-8">
+                  <div className="flex-1 text-center">
                     <h1 className="text-4xl sm:text-5xl font-extrabold text-gray-800 tracking-tight">Recipe Hub</h1>
                     <p className="mt-2 text-lg text-gray-500">Your personal cookbook, powered by Firebase.</p>
                     {userId && <p className="mt-4 text-xs text-gray-400 font-mono bg-gray-100 px-2 py-1 rounded-md inline-block">User ID: {userId}</p>}
-                </header>
+                  </div>
+                  {session && (
+                    <button
+                      onClick={handleLogout}
+                      className="ml-4 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors text-sm font-semibold"
+                    >
+                      Logout
+                    </button>
+                  )}
+                </div>
 
                 {error && <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-6 rounded-md" role="alert">{error}</div>}
                 {successMessage && <div className="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mb-6 rounded-md" role="alert">{successMessage}</div>}
@@ -373,18 +372,18 @@ const App = () => {
                                 {DIFFICULTY_LEVELS.map(d => <option key={d} value={d}>{d}</option>)}
                             </Select>
                             <div className="flex gap-2">
-                                <Input label="Prep Time" name="prepTime" type="number" min="0" value={recipe.prepTime} onChange={handleRecipeChange} placeholder="e.g., 30" autoComplete="off"/>
+                                <Input label="Prep Time" name="prepTime" type="number" value={recipe.prepTime} onChange={handleRecipeChange} placeholder="e.g., 30" autoComplete="off"/>
                                 <Select label="Unit" name="prepTimeUnit" value={recipe.prepTimeUnit} onChange={handleRecipeChange}>
                                     {TIME_UNITS.map(t => <option key={t} value={t}>{t}</option>)}
                                 </Select>
                             </div>
                              <div className="flex gap-2">
-                                <Input label="Cook Time" name="cookTime" type="number" min="0" value={recipe.cookTime} onChange={handleRecipeChange} placeholder="e.g., 45" autoComplete="off"/>
+                                <Input label="Cook Time" name="cookTime" type="number" value={recipe.cookTime} onChange={handleRecipeChange} placeholder="e.g., 45" autoComplete="off"/>
                                 <Select label="Unit" name="cookTimeUnit" value={recipe.cookTimeUnit} onChange={handleRecipeChange}>
                                     {TIME_UNITS.map(t => <option key={t} value={t}>{t}</option>)}
                                 </Select>
                             </div>
-                            <Input label="Serving Count" name="servingCount" type="number" min="0" value={recipe.servingCount} onChange={handleRecipeChange} placeholder="e.g., 4" autoComplete="off"/>
+                            <Input label="Serving Count" name="servingCount" type="number" value={recipe.servingCount} onChange={handleRecipeChange} placeholder="e.g., 4" autoComplete="off"/>
                             <Input label="YouTube URL" name="youtubeUrl" type="url" value={recipe.youtubeUrl} onChange={handleRecipeChange} placeholder="https://youtube.com/watch?v=..." autoComplete="youtubeUrl"/>
                             <ChipSelect 
                               label="Taste Profile" 
@@ -398,12 +397,12 @@ const App = () => {
 
                         {/* --- Section 2: Nutritional Information --- */}
                         <FormSection title="Nutritional Information (per serving)" icon={<BarChart className="text-green-500" />}>
-                            <Input label="Calories (kcal)" name="calories" type="number" min="0" value={nutrition.calories} onChange={handleNutritionChange} placeholder="e.g., 550" autoComplete="off"/>
-                            <Input label="Carbohydrates (g)" name="carbohydrates" type="number" min="0" value={nutrition.carbohydrates} onChange={handleNutritionChange} placeholder="e.g., 45" autoComplete="off"/>
-                            <Input label="Protein (g)" name="protein" type="number" min="0" value={nutrition.protein} onChange={handleNutritionChange} placeholder="e.g., 30" autoComplete="off"/>
-                            <Input label="Fat (g)" name="fat" type="number" min="0" value={nutrition.fat} onChange={handleNutritionChange} placeholder="e.g., 25" autoComplete="off"/>
-                            <Input label="Fiber (g)" name="fiber" type="number" min="0" value={nutrition.fiber} onChange={handleNutritionChange} placeholder="e.g., 8" autoComplete="off"/>
-                            <Input label="Sodium (mg)" name="sodium" type="number" min="0" value={nutrition.sodium} onChange={handleNutritionChange} placeholder="e.g., 800" autoComplete="off"/>
+                            <Input label="Calories (kcal)" name="calories" type="number" value={nutrition.calories} onChange={handleNutritionChange} placeholder="e.g., 550" autoComplete="off"/>
+                            <Input label="Carbohydrates (g)" name="carbohydrates" type="number" value={nutrition.carbohydrates} onChange={handleNutritionChange} placeholder="e.g., 45" autoComplete="off"/>
+                            <Input label="Protein (g)" name="protein" type="number" value={nutrition.protein} onChange={handleNutritionChange} placeholder="e.g., 30" autoComplete="off"/>
+                            <Input label="Fat (g)" name="fat" type="number" value={nutrition.fat} onChange={handleNutritionChange} placeholder="e.g., 25" autoComplete="off"/>
+                            <Input label="Fiber (g)" name="fiber" type="number" value={nutrition.fiber} onChange={handleNutritionChange} placeholder="e.g., 8" autoComplete="off"/>
+                            <Input label="Sodium (mg)" name="sodium" type="number" value={nutrition.sodium} onChange={handleNutritionChange} placeholder="e.g., 800" autoComplete="off"/>
                         </FormSection>
 
                         {/* --- Section 3: Ingredients --- */}
@@ -424,25 +423,25 @@ const App = () => {
                                     </div>
                                     <Input label="Ingredient Name" name="name" value={ing.name} onChange={(e) => handleIngredientChange(index, e)} placeholder="e.g., Onion, chopped" />
                                     <div className="flex gap-2">
-                                        <Input label="Quantity" name="quantity" type="number" min="0" value={ing.quantity} onChange={(e) => handleIngredientChange(index, e)} placeholder="e.g., 1.5" />
+                                        <Input label="Quantity" name="quantity" type="number" value={ing.quantity} onChange={(e) => handleIngredientChange(index, e)} placeholder="e.g., 1.5" />
                                         <Select label="Unit" name="unit" value={ing.unit} onChange={(e) => handleIngredientChange(index, e)}>
                                             {INGREDIENT_UNITS.map(u => <option key={u} value={u}>{u}</option>)}
                                         </Select>
                                     </div>
                                     <Input label="Grocery Item Name" name="groceryItemName" value={ing.groceryItemName} onChange={(e) => handleIngredientChange(index, e)} placeholder="e.g., Yellow Onions" />
                                     <div className="flex gap-2">
-                                        <Input label="Grocery MOQ" name="groceryItemMOQ" type="number" min="0" value={ing.groceryItemMOQ} onChange={(e) => handleIngredientChange(index, e)} placeholder="e.g., 1" />
+                                        <Input label="Grocery MOQ" name="groceryItemMOQ" type="number" value={ing.groceryItemMOQ} onChange={(e) => handleIngredientChange(index, e)} placeholder="e.g., 1" />
                                         <Select label="Unit" name="groceryItemUnit" value={ing.groceryItemUnit} onChange={(e) => handleIngredientChange(index, e)}>
                                             {GROCERY_UNITS.map(u => <option key={u} value={u}>{u}</option>)}
                                         </Select>
                                     </div>
                                     <div className="flex gap-2">
-                                        <Input label="Shelf Life" name="groceryItemShelfLife" type="number" min="0" value={ing.groceryItemShelfLife} onChange={(e) => handleIngredientChange(index, e)} placeholder="e.g., 2" />
+                                        <Input label="Shelf Life" name="groceryItemShelfLife" type="number" value={ing.groceryItemShelfLife} onChange={(e) => handleIngredientChange(index, e)} placeholder="e.g., 2" />
                                         <Select label="Unit" name="groceryItemShelfLifeUnit" value={ing.groceryItemShelfLifeUnit} onChange={(e) => handleIngredientChange(index, e)}>
                                             {SHELF_LIFE_UNITS.map(u => <option key={u} value={u}>{u}</option>)}
                                         </Select>
                                     </div>
-                                    <Input label="Conversion Ratio" name="conversionRatio" type="number" min="0" value={ing.conversionRatio} onChange={(e) => handleIngredientChange(index, e)} placeholder="e.g., 8" />
+                                    <Input label="Conversion Ratio" name="conversionRatio" type="number" value={ing.conversionRatio} onChange={(e) => handleIngredientChange(index, e)} placeholder="e.g., 8" />
                                 </div>
                             ))}
                             <button type="button" onClick={addIngredient} className="mt-4 flex items-center px-4 py-2 bg-teal-500 text-white rounded-lg hover:bg-teal-600 transition-colors font-semibold">
