@@ -166,11 +166,22 @@ export const ChipSelect = ({
 
 
 
-  type RecipeCardProps = {
-    r: any;
-    onDelete: (recipeId: any) => void;
+type RecipeCardProps = {
+    r: {
+      id: string;
+      recipeName: string;
+      cuisineType?: string;
+      courseType?: string;
+      mealType?: string[] | string;
+      tasteProfile?: string[] | string;
+      nutrition?: { calories?: number };
+      ingredients?: string[];
+      createAt?: string;
+    };
+    onDelete: (recipeId: string) => void;
     onClick?: () => void;
   };
+  
 
   export const RecipeCard = ({ r, onDelete, onClick }: RecipeCardProps) => {
     // Helper function to parse array data (same as in SavedRecipes)
